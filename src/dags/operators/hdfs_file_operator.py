@@ -101,17 +101,17 @@ class HdfsPutFilesOperator(BaseOperator):
         file_names = ast.literal_eval(self.file_names[0])
         self.files = [
             [
-                path.join(self.local_path, file),
-                path.join(self.remote_path, file[:6], "/", file),
+                path.join(self.local_path, "{}-hubway-tripdata.csv".format(file)),
+                path.join(self.remote_path, file, "{}-hubway-tripdata.csv".format(file)),
             ]
             for file in file_names
         ]
         hh = HdfsHook(hdfs_conn_id=self.hdfs_conn_id)
 
         for index, file in enumerate(self.files):
-            # TODO: Fix file names
-            local_file = path.join(self.local_path, file_names[index])
-            file[0]
+            # local_file = path.join(self.local_path, file[0], "-hubway-tripdata.csv")
+            # remote_file = path.join(self.remote_path, file[1], file[1], "-hubway-tripdata.csv")
+            local_file = file[0]
             remote_file = file[1]
 
             self.log.info(

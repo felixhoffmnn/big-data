@@ -46,13 +46,6 @@ clear_local_import_dir = ClearDirectoryOperator(
     dag=dag,
 )
 
-# TODO: Move to helper
-def get_year_month():
-    files = [
-        file for file in os.listdir("/home/airflow/bike_data") if file[:6].isdigit()
-    ]
-    return [file[:6] for file in files]
-
 
 download_data = BashOperator(
     task_id="download_data",
@@ -60,6 +53,12 @@ download_data = BashOperator(
     dag=dag,
 )
 
+# TODO: Move to helper
+def get_year_month():
+    files = [
+        file for file in os.listdir("/home/airflow/bike_data") if file[:6].isdigit()
+    ]
+    return [file[:6] for file in files]
 
 downloaded_files = PythonOperator(
     task_id="get_year_month",
@@ -104,7 +103,7 @@ create_hdfs_hubway_data_partition_dir_kpis = HdfsMkdirFileOperator(
 
 hdfs_put_hubway_data_raw = HdfsPutFilesOperator(
     task_id="upload-hubway-data-to-hdfs-raw",
-    local_path="/home/airflow/hubway_data/",
+    local_path="/home/airflow/bike_data/",
     remote_path="/user/hadoop/hubway_data/raw/",
     file_names=["{{ task_instance.xcom_pull(task_ids='get_year_month') }}"],
     hdfs_conn_id="hdfs",

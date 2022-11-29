@@ -8,7 +8,7 @@ RUN rm -rf /home/airflow/airflow/plugins/python
 ADD ./requirements.txt /home/tmp/python/
 
 WORKDIR /home/tmp/python/
-RUN pip3 install -r requirements.txt
+RUN pip3 install -r requirements_airflow.txt
 
 WORKDIR /
 

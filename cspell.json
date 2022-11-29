@@ -5,8 +5,10 @@
         "hadoop",
         "HDFS",
         "hiveserver",
+        "hubway",
         "Hubway",
         "Kaggle",
-        "Mkdirs"
+        "Mkdirs",
+        "tripdata"
     ]
 }

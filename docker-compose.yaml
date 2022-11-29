@@ -1,8 +1,8 @@
 version: "3.9"
 
+# TODO: Remove unused ports
 services:
   airflow:
-    # image: marcelmittelstaedt/airflow:latest
     build:
       context: .
       dockerfile: airflow.dockerfile
@@ -30,7 +30,6 @@ services:
       - 8032:8032
       - 8030:8030
       - 8031:8031
-      - 9000:9000
       - 8888:8888
       - 4040:4040
     networks:

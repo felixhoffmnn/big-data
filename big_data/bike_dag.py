@@ -93,17 +93,17 @@ for file in files:
                 dag=dag,
             )
         )
-        
+
     # elif re.search(r"hubway_Trips_", file):
     #     year = file[:-4][13:]
-        
+
     #     raw_mkdir_operator_2.append(HdfsMkdirFileOperator(
     #             task_id="mkdir_hdfs_hubway_tripdata_{}".format(year),
     #             directory="/user/hadoop/hubway/raw/per_year/".format(year[:4]),
     #             hdfs_conn_id="hdfs",
     #             dag=dag,
     #         ))
-        
+
 
     #     raw_put_file_operator_2.append(HdfsPutFileOperator(
     #             task_id="upload_hubway_to_hdfs_{}".format(year),
@@ -112,10 +112,10 @@ for file in files:
     #             hdfs_conn_id="hdfs",
     #             dag=dag,
     #         ))
-    
+
 dummy_task_1 = DummyOperator(task_id="dummy_task_1", dag=dag)
 
-    
+
 for i in range(len(raw_mkdir_operator_1)):
     download_data >> raw_mkdir_operator_1[i] >> raw_put_file_operator_1[i] >> dummy_task_1
 
@@ -156,11 +156,11 @@ pyspark_submit_raw_data = SparkSubmitOperator(
         verbose=True,
         dag=dag,
 )
-        
+
 
 # for i in range(len(raw_mkdir_operator_2)):
 #     download_data >> raw_mkdir_operator_2[i] >> raw_put_file_operator_2[i] >> dummy_task_1
-    
+
 # download_data >> station_mkdir_operator >> station_put_file_operator >> dummy_task_1
 
 # dummy_task_1 >> pyspark_submit_split_data

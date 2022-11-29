@@ -4,6 +4,7 @@ import pyspark
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col
 import googlemaps as gmaps 
+from math import sin, cos, sqrt, atan2, radians
 
 # def get_items(path: str):
 #     p = subprocess.Popen("hdfs dfs -ls {}".format(path) + " |  awk '{print $8}'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -22,8 +23,11 @@ if __name__ == '__main__':
     sc = pyspark.SparkContext()
     spark = SparkSession(sc)
     client = gmaps.Client(queries_per_second=1000, key="AIzaSyBPZubYA_GGZBo8-4eGd5Rfsa9Eui-Sn-o")
+    R = 6373.0
     
-    get_distance = udf(lambda s_lan, s_lon, e_lan, e_lon: client.directions(origin=(s_lan, s_lon), destination=(e_lan, e_lon), units="metric", mode="bicycling")[0]["legs"][0]["distance"]["value"])
+    # get_distance = udf(lambda s_lan, s_lon, e_lan, e_lon: client.directions(origin=(s_lan, s_lon), destination=(e_lan, e_lon), units="metric", mode="bicycling")[0]["legs"][0]["distance"]["value"])
+    
+    get_distance_math = udf(lambda s_lat, s_lon, e_lat, e_lon: R * 2 * atan2(sqrt(sin((radians(e_lat) - radians(s_lat)) / 2)**2 + cos(radians(s_lat)) * cos(radians(e_lat)) * sin((radians(e_lon) - radians(s_lon)) / 2)**2), sqrt(1 - sin((radians(e_lat) - radians(s_lat)) / 2)**2 + cos(radians(s_lat)) * cos(radians(e_lat)) * sin((radians(e_lon) - radians(s_lon)) / 2)**2)))
     
     for file in os.listdir("/home/airflow/bike_data/"):
         if re.search(r"^([0-9]{6})", file):
@@ -39,7 +43,7 @@ if __name__ == '__main__':
             
             df_names = df_names.where((col("start_station_latitude") != 0.0) & (col("start_station_longitude") != 0.0) & (col("end_station_latitude") != 0.0) & (col("end_station_longitude") != 0.0))
             
-            df_names = df_names.withColumn("trip_distance", get_distance(col("start_station_latitude"), col("start_station_longitude"), col("end_station_latitude"), col("end_station_longitude")))
+            df_names = df_names.withColumn("trip_distance", get_distance_math(col("start_station_latitude"), col("start_station_longitude"), col("end_station_latitude"), col("end_station_longitude")))
             
             df = df.join(df_names, on=["start_station_latitude", "start_station_longitude", "end_station_latitude", "end_station_longitude"])
 
