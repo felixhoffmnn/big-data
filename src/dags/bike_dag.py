@@ -83,13 +83,6 @@ create_hdfs_hubway_data_partition_dir_final = HdfsMkdirsFileOperator(
 
 create_hdfs_hubway_data_partition_dir_final.set_upstream(downloaded_files)
 
-create_hdfs_hubway_data_partition_dir_hiveSQL = HdfsMkdirFileOperator(
-    task_id="mkdir-hdfs-hubway-data-dir-hiveSQL",
-    directory="/user/hadoop/hubway_data/hiveSQL/",
-    hdfs_conn_id="hdfs",
-    dag=dag,
-)
-
 create_hdfs_hubway_data_partition_dir_kpis = HdfsMkdirFileOperator(
     task_id="mkdir-hdfs-hubway-data-dir-kpis",
     directory="/user/hadoop/hubway_data/kpis/",
@@ -111,7 +104,18 @@ pyspark_submit_raw_data = SparkSubmitOperator(
     conn_id="spark",
     application="/home/airflow/airflow/python/optimize_data.py",
     application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
-    name="raw_data",
+    total_executor_cores=4,
+    num_executors=2,
+    executor_memory="4G",
+    verbose=True,
+    dag=dag,
+)
+
+pyspark_calculate_kpis = SparkSubmitOperator(
+    task_id="pyspark_calculate_kpis",
+    conn_id="spark",
+    application="/home/airflow/airflow/python/calculate_kpis.py",
+    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     total_executor_cores=4,
     num_executors=2,
     executor_memory="4G",
@@ -126,10 +130,12 @@ clear_local_import_dir >> download_data >> downloaded_files
 
 downloaded_files >> create_hdfs_hubway_data_partition_dir_raw
 downloaded_files >> create_hdfs_hubway_data_partition_dir_final
-downloaded_files >> create_hdfs_hubway_data_partition_dir_hiveSQL
 downloaded_files >> create_hdfs_hubway_data_partition_dir_kpis
 
 create_hdfs_hubway_data_partition_dir_raw >> hdfs_put_hubway_data_raw
 
 hdfs_put_hubway_data_raw >> pyspark_submit_raw_data
 create_hdfs_hubway_data_partition_dir_final >> pyspark_submit_raw_data
+
+pyspark_submit_raw_data >> pyspark_calculate_kpis
+create_hdfs_hubway_data_partition_dir_kpis >> pyspark_calculate_kpis

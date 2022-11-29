@@ -69,7 +69,7 @@ if __name__ == "__main__":
         print("############ {} ############".format(year_month))
 
         raw_file = path.join("/user/hadoop/hubway_data/raw/", year_month, "{}-hubway-tripdata.csv".format(year_month))
-        final_file = path.join("/user/hadoop/hubway_data/final/", year_month, "{}-hubway-tripdata.csv".format(year_month))
+        final_file = path.join("/user/hadoop/hubway_data/final/", year_month, "{}-hubway-tripdata.parquet".format(year_month))
 
         df = (
             spark.read.format("csv")
@@ -95,7 +95,7 @@ if __name__ == "__main__":
             .withColumnRenamed("usertype", "user_type")
             .withColumnRenamed("birth year", "birth_year")
         )
-
+        
         df_names: DataFrame = (
             df.select(
                 "start_station_latitude",
@@ -149,4 +149,4 @@ if __name__ == "__main__":
         )
 
         # Write data to HDFS
-        df.write.format("csv").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save(final_file)
+        df.write.format("parquet").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save(final_file)

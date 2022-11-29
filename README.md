@@ -51,4 +51,4 @@ Lorem Ipsum
 
 ## Problems
 
-Lorem Ipsum
+1. Wenn ich die docker compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den dag ausführt, läuft alles wieder.
