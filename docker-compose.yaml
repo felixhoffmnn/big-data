@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  airflow:
+    # image: marcelmittelstaedt/airflow:latest
+    build:
+      context: .
+      dockerfile: airflow.dockerfile
+    image: felixhoffmnn/airflow:latest
+    container_name: airflow
+    volumes:
+      - ./src/dags/:/home/airflow/airflow/dags/
+      - ./src/python/:/home/airflow/airflow/python/
+      - ./src/plugins/:/home/airflow/airflow/plugins/
+      - ./data/kaggle/:/home/airflow/.kaggle/
+      - ./data/excel_files/:/home/airflow/excel-files/
+    ports:
+      - 8080:8080
+    networks:
+      - bigdatanet
+
+  spark:
+    image: marcelmittelstaedt/spark_base:latest
+    container_name: hadoop
+    ports:
+      - 8088:8088
+      - 9870:9870
+      - 9864:9864
+      - 10000:10000
+      - 8032:8032
+      - 8030:8030
+      - 8031:8031
+      - 9000:9000
+      - 8888:8888
+      - 4040:4040
+    networks:
+      - bigdatanet
+
+networks:
+  bigdatanet:
+    name: bigdatanet
+    driver: bridge
