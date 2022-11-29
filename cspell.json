@@ -2,6 +2,7 @@
     "language": "en, de, python",
     "words": [
         "DHBW",
+        "dropna",
         "hadoop",
         "HDFS",
         "hiveserver",

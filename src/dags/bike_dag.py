@@ -3,17 +3,19 @@ Title: Use kaggle.com Hubway Data To Calculate Bike Sharing Usage KPIs
 Author: Maxime Fritzsch
 Description: BigData Lecture DHBW Stuttgart - Exam 2022/2023
 """
-import os
 from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+
 
 from operators.directory_operator import (
     ClearDirectoryOperator,
     CreateDirectoryOperator,
 )
+from helpers.year_months import get_year_months
 from operators.hdfs_file_operator import (
     HdfsMkdirFileOperator,
     HdfsMkdirsFileOperator,
@@ -53,23 +55,17 @@ download_data = BashOperator(
     dag=dag,
 )
 
-# TODO: Move to helper
-def get_year_month():
-    files = [
-        file for file in os.listdir("/home/airflow/bike_data") if file[:6].isdigit()
-    ]
-    return [file[:6] for file in files]
 
 downloaded_files = PythonOperator(
-    task_id="get_year_month",
-    python_callable=get_year_month,
+    task_id="get_year_months",
+    python_callable=get_year_months,
     dag=dag,
 )
 
 create_hdfs_hubway_data_partition_dir_raw = HdfsMkdirsFileOperator(
     task_id="mkdir-hdfs-hubway-data-dir-raw",
     directory="/user/hadoop/hubway_data/raw/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_month') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
@@ -80,7 +76,7 @@ create_hdfs_hubway_data_partition_dir_raw.set_upstream(downloaded_files)
 create_hdfs_hubway_data_partition_dir_final = HdfsMkdirsFileOperator(
     task_id="mkdir-hdfs-hubway-data-dir-final",
     directory="/user/hadoop/hubway_data/final/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_month') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
@@ -105,8 +101,21 @@ hdfs_put_hubway_data_raw = HdfsPutFilesOperator(
     task_id="upload-hubway-data-to-hdfs-raw",
     local_path="/home/airflow/bike_data/",
     remote_path="/user/hadoop/hubway_data/raw/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_month') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
+    dag=dag,
+)
+
+pyspark_submit_raw_data = SparkSubmitOperator(
+    task_id="pyspark_submit_raw_data",
+    conn_id="spark",
+    application="/home/airflow/airflow/python/optimize_data.py",
+    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    name="raw_data",
+    total_executor_cores=4,
+    num_executors=2,
+    executor_memory="4G",
+    verbose=True,
     dag=dag,
 )
 
@@ -121,3 +130,6 @@ downloaded_files >> create_hdfs_hubway_data_partition_dir_hiveSQL
 downloaded_files >> create_hdfs_hubway_data_partition_dir_kpis
 
 create_hdfs_hubway_data_partition_dir_raw >> hdfs_put_hubway_data_raw
+
+hdfs_put_hubway_data_raw >> pyspark_submit_raw_data
+create_hdfs_hubway_data_partition_dir_final >> pyspark_submit_raw_data
