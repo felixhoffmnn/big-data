@@ -19,8 +19,7 @@ from helpers.year_months import get_year_months
 from operators.hdfs_file_operator import (
     HdfsMkdirFileOperator,
     HdfsMkdirsFileOperator,
-    HdfsPutFilesOperator,
-    HdfsGetCSVFileOperator
+    HdfsPutFilesOperator
 )
 
 args = {"owner": "airflow"}
@@ -136,28 +135,28 @@ pyspark_combine_kpis = SparkSubmitOperator(
     dag=dag,
 )
 
-create_local_kpis_dir = CreateDirectoryOperator(
-    task_id='create_kpis_dir',
-    path="/home/airflow/",
-    directory="excel_files",
-    dag=dag
-)
+# create_local_kpis_dir = CreateDirectoryOperator(
+#     task_id='create_kpis_dir',
+#     path="/home/airflow/",
+#     directory="excel_files",
+#     dag=dag
+# )
 
-clear_local_kpis_dir = ClearDirectoryOperator(
-    task_id='clear_kpis_dir',
-    directory='/home/airflow/excel_files',
-    pattern='*',
-    dag=dag
-)
+# clear_local_kpis_dir = ClearDirectoryOperator(
+#     task_id='clear_kpis_dir',
+#     directory='/home/airflow/excel_files',
+#     pattern='*',
+#     dag=dag
+# )
 
 # TODO: Fix this
-get_calculated_kpis = HdfsGetCSVFileOperator(
-    task_id='get_calculated_kpis',
-    remote_file="/user/hadoop/hubway_data/kpis/combined-kpis.csv",
-    local_file="/home/airflow/excel_files/combined-kpis.csv",
-    hdfs_conn_id="hdfs",
-    dag=dag
-)
+# get_calculated_kpis = HdfsGetCSVFileOperator(
+#     task_id='get_calculated_kpis',
+#     remote_file="/user/hadoop/hubway_data/kpis/combined-kpis.csv",
+#     local_file="/home/airflow/excel_files/combined-kpis.csv",
+#     hdfs_conn_id="hdfs",
+#     dag=dag
+# )
 
 
 create_local_import_dir >> clear_local_import_dir
@@ -178,4 +177,4 @@ create_hdfs_hubway_data_partition_dir_kpis >> pyspark_calculate_kpis
 
 pyspark_calculate_kpis >> pyspark_combine_kpis
 
-pyspark_combine_kpis >> create_local_kpis_dir >> clear_local_kpis_dir >> get_calculated_kpis
+# pyspark_combine_kpis >> create_local_kpis_dir >> clear_local_kpis_dir >> get_calculated_kpis

@@ -49,4 +49,5 @@ if __name__ == "__main__":
     kpi_data = reduce(DataFrame.unionAll, data)
 
     # Write data to HDFS
-    kpi_data.write.format("csv").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save("/user/hadoop/hubway_data/kpis/combined-kpis.csv")
+    # TODO: Export to Excel
+    kpi_data.toPandas().to_csv("/home/airflow/excel_files/combined-kpis.csv", index=False)

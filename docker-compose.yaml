@@ -13,7 +13,7 @@ services:
       - ./src/python/:/home/airflow/airflow/python/
       - ./src/plugins/:/home/airflow/airflow/plugins/
       - ./data/kaggle/:/home/airflow/.kaggle/
-      - ./data/excel_files/:/home/airflow/excel-files/
+      - ./data/excel_files/:/home/airflow/excel_files/
     ports:
       - 8080:8080
     networks:
