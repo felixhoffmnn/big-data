@@ -52,3 +52,8 @@ Lorem Ipsum
 ## Problems
 
 1. Wenn ich die docker compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den dag ausführt, läuft alles wieder.
+2. In der docker compose werden einerseits Ordner wie `dags`, `python` und `output` gemounted. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels dem folgenden Befehl können die notwendigen Berechtigungen angepasst werden.
+
+    ```bash
+    sudo chmod 777 data/output/
+    ```

@@ -64,30 +64,30 @@ def get_age(birth_year):
 
     return age
 
-def get_timeslot_helper(time: datetime):
-    if (0 <= time.hour < 6):
+def get_timeslot_helper(hour: int):
+    if (0 <= hour < 6):
         return 0
-    elif (6 <= time.hour < 12):
+    elif (6 <= hour < 12):
         return 1
-    elif (12 <= time.hour < 18):
+    elif (12 <= hour < 18):
         return 2
-    elif (19 <= time.hour <= 24):
+    elif (19 <= hour <= 24):
         return 3
 
     return -1
 
 def get_timeslot(start_time: datetime, end_time: datetime, time_slot: int):
-    start_slot = get_timeslot_helper(start_time)
-    end_slot = get_timeslot_helper(end_time)
+    start_slot = get_timeslot_helper(start_time.hour)
+    end_slot = get_timeslot_helper(end_time.hour)
 
-    if start_slot or end_slot == -1:
+    if (start_slot or end_slot) < 0:
         return -1
 
     if start_slot == time_slot or end_slot == time_slot:
         return 1
-    if start_slot < time_slot and end_slot > time_slot:
+    elif start_slot < time_slot and end_slot > time_slot:
         return 1
-    if start_slot > time_slot and end_slot > time_slot and start_slot < end_slot:
+    elif start_slot > time_slot and end_slot > time_slot and start_slot > end_slot:
         return 1
 
     return 0
@@ -108,22 +108,8 @@ def get_generation(birth_year):
             return 4
         else:
             return 5
-    except ValueError:
+    except (ValueError, TypeError):
         return -1
-    except TypeError:
-        return -1
-
-def convert_seconds_to_minutes(duration):
-    try:
-        duration = int(duration)
-        duration = duration / 60
-    except ValueError:
-        duration = 0
-    except TypeError:
-        duration = 0
-
-    return duration
-
 
 if __name__ == "__main__":
     """
@@ -145,8 +131,10 @@ if __name__ == "__main__":
 
     get_distance_udf = udf(get_distance, FloatType())
     get_age_udf = udf(get_age, IntegerType())
-    get_timeslot_udf = udf(get_timeslot, IntegerType())
-    convert_seconds_to_minutes_udf = udf(convert_seconds_to_minutes, IntegerType())
+    get_timeslot_0_udf = udf(lambda start_time, end_time: get_timeslot(start_time, end_time, 0), IntegerType())
+    get_timeslot_1_udf =  udf(lambda start_time, end_time: get_timeslot(start_time, end_time, 1), IntegerType())
+    get_timeslot_2_udf =  udf(lambda start_time, end_time: get_timeslot(start_time, end_time, 2), IntegerType())
+    get_timeslot_3_udf =  udf(lambda start_time, end_time: get_timeslot(start_time, end_time, 3), IntegerType())
     get_generation_udf = udf(get_generation, IntegerType())
 
 
@@ -178,7 +166,7 @@ if __name__ == "__main__":
             .withColumnRenamed("bikeid", "bike_id")
             .withColumnRenamed("usertype", "user_type")
             .withColumnRenamed("birth year", "birth_year")
-        ).dropna(how="any").where((col("trip_duration") > 0) & (col("trip_duration") < 1440))
+        ).dropna(how="any").where((col("trip_duration") > 0) & (col("trip_duration") < 86400))
 
         # Create smaller Dataframe to reduce calculations or api requests
         df_distance: DataFrame = (
@@ -214,21 +202,17 @@ if __name__ == "__main__":
             ],
         )
 
-        df = df.withColumn("trip_duration", convert_seconds_to_minutes_udf(col("trip_duration")))
         df = df.withColumn("generation", get_generation_udf(col("birth_year")))
         df = df.withColumn("age", get_age_udf(col("birth_year")))
-        for i in range(4):
-            df = df.withColumn(
-                "timeslot_{}".format(i),
-                get_timeslot_udf(
-                    col("start_time"),
-                    col("end_time"),
-                    i,  # type: ignore
-                )
-            )
+        df = df.withColumn("timeslot_0", get_timeslot_0_udf(col("start_time"), col("end_time")))
+        df = df.withColumn("timeslot_1", get_timeslot_1_udf(col("start_time"), col("end_time")))
+        df = df.withColumn("timeslot_2", get_timeslot_2_udf(col("start_time"), col("end_time")))
+        df = df.withColumn("timeslot_3", get_timeslot_3_udf(col("start_time"), col("end_time")))
+
+        print(df.collect()[:5])
 
         # Select
-        df = df.where((col("trip_distance") > 0) & (col("age") > 0) & (col("generation") >= 0))
+        df = df.where((col("age") > 0) & (col("generation") >= 0) & (col("trip_duration") > 0) & ((col("timeslot_0") == 1) | (col("timeslot_1") == 1) | (col("timeslot_2") == 1) | (col("timeslot_3") == 1)))
         df = df.drop(
             "start_time",
             "end_time",
@@ -239,6 +223,8 @@ if __name__ == "__main__":
             "user_type",
             "birth_year",
         )
+
+        print(df.collect()[:5])
 
         # Write data to HDFS
         df.write.format("parquet").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save(final_file)

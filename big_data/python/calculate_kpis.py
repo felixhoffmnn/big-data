@@ -5,7 +5,7 @@ from os import path
 import pyspark
 
 from pyspark.sql import SparkSession, Row, DataFrame
-from pyspark.sql.functions import desc, col, count, sum
+from pyspark.sql.functions import desc, col, count
 
 
 def get_args():
@@ -27,8 +27,6 @@ if __name__ == "__main__":
     args = get_args()
     year_months = ast.literal_eval(args.yearmonth)
 
-    print(year_months)
-
     # Initialize Spark Context
     sc = pyspark.SparkContext()
     spark = SparkSession(sc)
@@ -43,7 +41,7 @@ if __name__ == "__main__":
         print("############ {} ############".format(year_month))
 
         final_file = path.join("/user/hadoop/hubway_data/final", year_month, "hubway-tripdata.parquet")
-        kpi_file = path.join("/user/hadoop/hubway_data/kpis", year_month, "kpis.parquet".format(year_month))
+        kpi_file = path.join("/user/hadoop/hubway_data/kpis", year_month, "kpis.parquet")
 
         df = (
             spark.read.format("parquet")
@@ -53,21 +51,44 @@ if __name__ == "__main__":
             .load(final_file)
         )
 
+        print(df.collect()[:5])
+
         avg_kpis = df.agg({"trip_duration": "avg", "trip_distance": "avg"}).withColumnRenamed("avg(trip_duration)", "avg_trip_duration").withColumnRenamed("avg(trip_distance)", "avg_trip_distance").collect()
         print(avg_kpis[0])
-        avg_trip_duration = round(avg_kpis[0]["avg_trip_duration"] / 60, 0)
-        avg_trip_distance = avg_kpis[0]["avg_trip_distance"]
+        try:
+            avg_trip_distance = float(avg_kpis[0]["avg_trip_distance"])
+        except (IndexError, TypeError, ValueError):
+            avg_trip_distance = 0.0
+        try:
+            avg_trip_duration = int(avg_kpis[0]["avg_trip_duration"] / 60)
+        except (IndexError, TypeError, ValueError):
+            avg_trip_duration = 0
 
         gender_df: DataFrame = df.groupBy(col("gender")).count()
-        gender_share_m = gender_df.where(col("gender") == "Male").collect()[0]["count"]
-        gender_share_f = gender_df.where(col("gender") == "Female").collect()[0]["count"]
-        gender_count = gender_df.agg(sum(col("count"))).withColumnRenamed("sum(count)", "count").collect()[0]["count"]
-        m = gender_share_m / gender_count * 100
-        w = gender_share_f / gender_count * 100
-        d = (gender_count - gender_share_m - gender_share_f) / gender_count * 100
-        # m, w, d
-        gender_share = [round(m, 2), round(w, 2), round(d, 2)]
-        gender_share = str(gender_share)
+        print(gender_df.collect())
+        try:
+            gender_count_d = gender_df.where(col("gender") == 0).collect()[0]["count"]
+        except IndexError:
+            gender_count_d = 0
+        try:
+            gender_count_m = gender_df.where(col("gender") == 1).collect()[0]["count"]
+        except IndexError:
+            gender_count_m = 0
+        try:
+            gender_count_f = gender_df.where(col("gender") == 2).collect()[0]["count"]
+        except IndexError:
+            gender_count_f = 0
+
+        gender_count = gender_count_m + gender_count_f + gender_count_d
+
+        if gender_count > 0:
+            m = gender_count_m / gender_count * 100
+            w = gender_count_f / gender_count * 100
+            d = gender_count_d / gender_count * 100
+            # m, w, d
+            gender_share = str([("m", m), ("w", w), ("d", d)])
+        else:
+            gender_share = "[]"
 
         # tuple(age, count)
         age_share = str([tuple(element) for element in df.groupBy("age").count().orderBy(desc("count")).collect()])
@@ -98,25 +119,29 @@ if __name__ == "__main__":
 
 
         # tuple(timeslot, percentage)
-        time_slots = []
-        time_slot_0 = df.where(col("timeslot_0") == 1).groupBy("timeslot_0").count().collect()[0]["count"]
-        time_slot_1 = df.where(col("timeslot_1") == 1).groupBy("timeslot_1").count().collect()[0]["count"]
-        time_slot_2 = df.where(col("timeslot_2") == 1).groupBy("timeslot_2").count().collect()[0]["count"]
-        time_slot_3 = df.where(col("timeslot_3") == 1).groupBy("timeslot_3").count().collect()[0]["count"]
-        slot_count = time_slot_0 + time_slot_1 + time_slot_2 + time_slot_3
-        time_slots.append(
-            tuple((0, round(time_slot_0/slot_count*100, 2)))
-        )
-        time_slots.append(
-            tuple((1, round(time_slot_1/slot_count*100, 2)))
-        )
-        time_slots.append(
-            tuple((2, round(time_slot_2/slot_count*100, 2)))
-        )
-        time_slots.append(
-            tuple((3, round(time_slot_3/slot_count*100, 2)))
-        )
-        time_slots = str(time_slots)
+        try:
+            time_slot_0 = df.where(col("timeslot_0") == 1).groupBy("timeslot_0").count().collect()[0]["count"]
+        except IndexError:
+            time_slot_0 = 0
+        try:
+            time_slot_1 = df.where(col("timeslot_1") == 1).groupBy("timeslot_1").count().collect()[0]["count"]
+        except IndexError:
+            time_slot_1 = 0
+        try:
+            time_slot_2 = df.where(col("timeslot_2") == 1).groupBy("timeslot_2").count().collect()[0]["count"]
+        except IndexError:
+            time_slot_2 = 0
+        try:
+            time_slot_3 = df.where(col("timeslot_3") == 1).groupBy("timeslot_3").count().collect()[0]["count"]
+        except IndexError:
+            time_slot_3 = 0
+
+        time_slots_count = time_slot_0 + time_slot_1 + time_slot_2 + time_slot_3
+
+        if time_slots_count > 0:
+            time_slots = str([(0, time_slot_0 / time_slots_count * 100), (1, time_slot_1 / time_slots_count * 100), (2, time_slot_2 / time_slots_count * 100), (3, time_slot_3 / time_slots_count * 100)])
+        else:
+            time_slots = "[]"
 
         """
         `year_month`, `avg_trip_duration`, `avg_trip_distance`,
