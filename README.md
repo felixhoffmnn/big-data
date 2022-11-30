@@ -37,7 +37,7 @@ Nach dem Ausführen des `bike_dag` werden folgende Schritte ausgeführt:
 6. Lädt die `raw` Daten und führt Funktionen auf diesen aus und speichert diese letztlich im `final` Ordner auf dem HDFS Filesystem
 7. Lädt die `final` Daten in die Hive Datenbank
 8. Berechnet die **KPIs** mittels PySpark
-9. Lädt die Ergebnisse von dem HDFS Filesystem in das Dateisystem des Nutzers in den `data/excel_files` Ordner
+9. Lädt die Ergebnisse von dem HDFS Filesystem in das Dateisystem des Nutzers in den `data/output` Ordner
 
 ### Functions
 

@@ -36,18 +36,18 @@ if __name__ == "__main__":
     for year_month in year_months:
         print("############ {} ############".format(year_month))
 
-        kpi_file = path.join("/user/hadoop/hubway_data/kpis/", "{}-kpis.parquet".format(year_month))
+        kpi_file = path.join("/user/hadoop/hubway_data/kpis", year_month, "kpis.parquet")
 
-        data.append((
+        data.append(
             spark.read.format("parquet")
             .options(
                 header="true", delimiter=",", nullValue="null", inferschema="true"
             )
             .load(kpi_file)
-        ).dropna(how="any"))
+        )
 
     kpi_data = reduce(DataFrame.unionAll, data)
 
     # Write data to HDFS
     # TODO: Export to Excel
-    kpi_data.toPandas().to_csv("/home/airflow/excel_files/combined-kpis.csv", index=False)
+    kpi_data.toPandas().to_excel("/home/airflow/output/combined-kpis.xlsx", index=False)

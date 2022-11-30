@@ -1,3 +1,5 @@
 kaggle
 googlemaps
 pandas
+openpyxl
+numpy

@@ -17,7 +17,6 @@ from operators.directory_operator import (
 )
 from helpers.year_months import get_year_months
 from operators.hdfs_file_operator import (
-    HdfsMkdirFileOperator,
     HdfsMkdirsFileOperator,
     HdfsPutFilesOperator
 )
@@ -41,9 +40,24 @@ create_local_import_dir = CreateDirectoryOperator(
     dag=dag,
 )
 
+create_output_dir = CreateDirectoryOperator(
+    task_id="create_output_dir",
+    path="/home/airflow",
+    directory="output",
+    dag=dag,
+)
+
 clear_local_import_dir = ClearDirectoryOperator(
     task_id="clear_import_dir",
     directory="/home/airflow/bike_data",
+    pattern="*",
+    dag=dag,
+)
+
+
+clear_output_dir = ClearDirectoryOperator(
+    task_id="clear_output_dir",
+    directory="/home/airflow/output",
     pattern="*",
     dag=dag,
 )
@@ -63,7 +77,7 @@ downloaded_files = PythonOperator(
 )
 
 create_hdfs_hubway_data_partition_dir_raw = HdfsMkdirsFileOperator(
-    task_id="mkdir-hdfs-hubway-data-dir-raw",
+    task_id="mkdirs-hdfs-hubway-data-dir-raw",
     directory="/user/hadoop/hubway_data/raw/",
     file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
@@ -74,7 +88,7 @@ create_hdfs_hubway_data_partition_dir_raw.set_upstream(downloaded_files)
 
 
 create_hdfs_hubway_data_partition_dir_final = HdfsMkdirsFileOperator(
-    task_id="mkdir-hdfs-hubway-data-dir-final",
+    task_id="mkdirs-hdfs-hubway-data-dir-final",
     directory="/user/hadoop/hubway_data/final/",
     file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
@@ -83,12 +97,15 @@ create_hdfs_hubway_data_partition_dir_final = HdfsMkdirsFileOperator(
 
 create_hdfs_hubway_data_partition_dir_final.set_upstream(downloaded_files)
 
-create_hdfs_hubway_data_partition_dir_kpis = HdfsMkdirFileOperator(
-    task_id="mkdir-hdfs-hubway-data-dir-kpis",
+create_hdfs_hubway_data_partition_dir_kpis = HdfsMkdirsFileOperator(
+    task_id="mkdirs-hdfs-hubway-data-dir-kpis",
     directory="/user/hadoop/hubway_data/kpis/",
+    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
+
+create_hdfs_hubway_data_partition_dir_kpis.set_upstream(downloaded_files)
 
 hdfs_put_hubway_data_raw = HdfsPutFilesOperator(
     task_id="upload-hubway-data-to-hdfs-raw",
@@ -135,33 +152,11 @@ pyspark_combine_kpis = SparkSubmitOperator(
     dag=dag,
 )
 
-# create_local_kpis_dir = CreateDirectoryOperator(
-#     task_id='create_kpis_dir',
-#     path="/home/airflow/",
-#     directory="excel_files",
-#     dag=dag
-# )
 
-# clear_local_kpis_dir = ClearDirectoryOperator(
-#     task_id='clear_kpis_dir',
-#     directory='/home/airflow/excel_files',
-#     pattern='*',
-#     dag=dag
-# )
+create_local_import_dir >> clear_local_import_dir >> download_data
+create_output_dir >> clear_output_dir >> download_data
 
-# TODO: Fix this
-# get_calculated_kpis = HdfsGetCSVFileOperator(
-#     task_id='get_calculated_kpis',
-#     remote_file="/user/hadoop/hubway_data/kpis/combined-kpis.csv",
-#     local_file="/home/airflow/excel_files/combined-kpis.csv",
-#     hdfs_conn_id="hdfs",
-#     dag=dag
-# )
-
-
-create_local_import_dir >> clear_local_import_dir
-
-clear_local_import_dir >> download_data >> downloaded_files
+download_data >> downloaded_files
 
 downloaded_files >> create_hdfs_hubway_data_partition_dir_raw
 downloaded_files >> create_hdfs_hubway_data_partition_dir_final
@@ -176,5 +171,3 @@ pyspark_submit_raw_data >> pyspark_calculate_kpis
 create_hdfs_hubway_data_partition_dir_kpis >> pyspark_calculate_kpis
 
 pyspark_calculate_kpis >> pyspark_combine_kpis
-
-# pyspark_combine_kpis >> create_local_kpis_dir >> clear_local_kpis_dir >> get_calculated_kpis

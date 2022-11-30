@@ -16,7 +16,14 @@ jupyter = "^1.0.0"
 pyarrow = "^0.11.0"
 googlemaps = "^4.7.2"
 hdfs = "^2.7.0"
+numpy = "1.19"
 
+[tool.black]
+line-length = 120
+target-version = ["py37"]
+
+[tool.isort]
+profile = "black"
 
 [build-system]
 requires = ["poetry-core"]
