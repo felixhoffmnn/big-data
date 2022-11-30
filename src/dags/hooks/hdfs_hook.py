@@ -1,4 +1,3 @@
-from airflow.exceptions import AirflowException
 from airflow.hooks.base_hook import BaseHook
 import pyarrow as pa
 import io
@@ -7,11 +6,11 @@ class HdfsHook(BaseHook):
 
     def __init__(self, hdfs_conn_id='hdfs_default'):
         self.hdfs_conn_id = hdfs_conn_id
-        
+
 
     def get_conn(self):
         conn_data = self.get_connection(self.hdfs_conn_id)
-        conn = pa.hdfs.connect(conn_data.host, conn_data.port, user=conn_data.login) 
+        conn = pa.hdfs.connect(conn_data.host, conn_data.port, user=conn_data.login)
         return conn
 
     def ls(self, directory):
@@ -61,7 +60,20 @@ class HdfsHook(BaseHook):
 
         :param directory: directory to create within HDFS
         :type directory: string
-        """        
+        """
         conn = self.get_conn()
         conn.mkdir(directory)
+
+    def getParquetFile(self, remote_file, local_file):
+        conn = self.get_conn()
+        files = conn.ls(remote_file)
+        for file in files:
+            if 'part' in file:
+                out_buf = io.BytesIO()
+                conn.download(file, out_buf)
+                print('Donwload: ' + file)
+                with open(local_file, "wb") as outfile:
+                    outfile.write(out_buf.getbuffer())
+                return
+
 

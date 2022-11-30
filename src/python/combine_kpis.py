@@ -1,9 +1,10 @@
 import argparse
+from functools import reduce
 import ast
 from os import path
 
 import pyspark
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 
 
 def get_args():
@@ -31,12 +32,11 @@ if __name__ == "__main__":
     sc = pyspark.SparkContext()
     spark = SparkSession(sc)
 
-
     data = []
     for year_month in year_months:
         print("############ {} ############".format(year_month))
 
-        kpi_file = path.join("/user/hadoop/hubway_data/kpi/", "{}-kpis.parquet".format(year_month))
+        kpi_file = path.join("/user/hadoop/hubway_data/kpis/", "{}-kpis.parquet".format(year_month))
 
         data.append((
             spark.read.format("parquet")
@@ -46,6 +46,7 @@ if __name__ == "__main__":
             .load(kpi_file)
         ).dropna(how="any"))
 
+    kpi_data = reduce(DataFrame.unionAll, data)
 
     # Write data to HDFS
-    df_agg.write.format("parquet").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save(final_file)
+    kpi_data.write.format("csv").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save("/user/hadoop/hubway_data/kpis/combined-kpis.csv")
