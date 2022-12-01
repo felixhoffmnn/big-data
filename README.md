@@ -2,7 +2,7 @@
 
 Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters and der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
 
-## Getting Started
+## Installation
 
 Bevor der Workflow zum Konvertieren der Daten ausgeführt werden kann ist es notwendig **Hadoop** und **Airflow** zu starten. Hierfür werden die vorgegeben Container verwendet. Falls dies auf einer GCP VM ausgeführt wird, muss zunächst Docker installiert werden ([Guide](https://docs.docker.com/engine/install/ubuntu/)).
 
@@ -23,7 +23,7 @@ Es ist relevant das Terminal, in welchem `hiveserver2` ausgeführt wird, nicht z
 
 Unter http://localhost:8080/admin sollte nun Airflow erreichbar sein. Hier können die einzelnen Dags ausgeführt werden.
 
-## Concept
+## Konzept
 
 Für einen leichteren Umgang verwendet dieses Projekt **Docker Compose** um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
 
@@ -39,11 +39,20 @@ Nach dem Ausführen des `bike_dag` werden folgende Schritte ausgeführt:
 8. Berechnet die **KPIs** mittels PySpark
 9. Lädt die Ergebnisse von dem HDFS Filesystem in das Dateisystem des Nutzers in den `data/output` Ordner
 
-### Functions
+### Funktionen
 
-| Function | Description |
-| -------- | ----------- |
-| Test     | Test        |
+| Funktion | Beschreibung |
+| -------- | ------------ |
+| Test     | Test         |
+
+### Datenbereinigung
+
+Um die Qualität der Daten sicherzustellen, werden die Daten vor der Berechnung der KPIs bereinigt. Hierbei werden die folgenden Schritte ausgeführt:
+
+1. Filter `trip_duration` nach Werten größer als `0` und kleiner als `86400` (24 Stunden)
+2. Filter `age` nach Werten größer als `0` und kleiner als `100`
+3. Filter `generation` nach Werten größer als `0` (`generation == -1` repräsentiert einen einen Fehler)
+4. Filter nach `timeslot_[0,1,2,3]` so dass mindestens ein Wert größer als `0` ist
 
 ### Task Flow
 
@@ -57,3 +66,5 @@ Lorem Ipsum
     ```bash
     sudo chmod 777 data/output/
     ```
+
+3. Wenn die docker compose auf einem Windows Rechner ausgeführt wird, kann es dazu kommen, dass die `EOL` von `LF` sich auf `CRLF` ändert. Dies führt dazu, dass der `airflow` Container nicht starten kann.

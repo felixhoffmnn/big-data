@@ -212,7 +212,7 @@ if __name__ == "__main__":
         print(df.collect()[:5])
 
         # Select
-        df = df.where((col("age") > 0) & (col("generation") >= 0) & (col("trip_duration") > 0) & ((col("timeslot_0") == 1) | (col("timeslot_1") == 1) | (col("timeslot_2") == 1) | (col("timeslot_3") == 1)))
+        df = df.where((col("age") > 0) & (col("age") < 100) & (col("generation") >= 0) & ((col("timeslot_0") == 1) | (col("timeslot_1") == 1) | (col("timeslot_2") == 1) | (col("timeslot_3") == 1)))
         df = df.drop(
             "start_time",
             "end_time",
