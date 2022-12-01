@@ -5,7 +5,7 @@ from os import path
 import pyspark
 
 from pyspark.sql import SparkSession, Row, DataFrame
-from pyspark.sql.functions import desc, col, count
+from pyspark.sql.functions import desc, col
 
 
 def get_args():
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     row = Row(
         "year_month", "avg_trip_duration", "avg_trip_distance",
-        "gender_share", "age_share", "top_used_bikes",
+        "gender_share", "age_share", "generation_share", "top_used_bikes",
         "top_start_stations", "top_end_stations", "time_slots"
     )
 
@@ -82,41 +82,26 @@ if __name__ == "__main__":
         gender_count = gender_count_m + gender_count_f + gender_count_d
 
         if gender_count > 0:
-            m = gender_count_m / gender_count * 100
-            w = gender_count_f / gender_count * 100
-            d = gender_count_d / gender_count * 100
+            m = float(gender_count_m / gender_count * 100)
+            w = float(gender_count_f / gender_count * 100)
+            d = float(gender_count_d / gender_count * 100)
             # m, w, d
             gender_share = str([("m", m), ("w", w), ("d", d)])
         else:
             gender_share = "[]"
 
         # tuple(age, count)
-        age_share = str([tuple(element) for element in df.groupBy("age").count().orderBy(desc("count")).collect()])
-
+        age_share = str([(age, count) for age, count in df.groupBy("age").count().orderBy(desc("count")).collect()][:10])
+        generation_share = str([(generation, count) for generation, count in df.groupBy("generation").count().orderBy(desc("count")).collect()])
 
         # tuple(bikeid, count)
-        top_used_bikes = []
-        for i in df.groupBy("bike_id").count().orderBy(desc("count")).limit(10).collect():
-            top_used_bikes.append(tuple(i))
-        top_used_bikes = str(top_used_bikes)
+        top_used_bikes = str([(id, count) for id, count in df.groupBy("bike_id").count().orderBy(desc("count")).limit(10).collect()])
 
         # tuple(start station id, count)
-        top_start_stations = []
-        for i in df.groupBy("start_station_id").count().orderBy(desc("count")).limit(10).collect():
-            id, count = i
-            name = df.where(col("start_station_id") == id).select("start_station_name").limit(1).collect()[0]["start_station_name"]
-            top_start_stations.append(tuple((name, count)))
-        top_start_stations = str(top_start_stations)
-
+        top_start_stations = str([(df.where(col("start_station_id") == id).select("start_station_name").limit(1).collect()[0]["start_station_name"], count) for id, count in df.groupBy("start_station_id").count().orderBy(desc("count")).limit(10).collect()])
 
         # tuple(end station id, count)
-        top_end_stations = []
-        for i in df.groupBy("end_station_id").count().orderBy(desc("count")).limit(10).collect():
-            id, count = i
-            name = df.where(col("end_station_id") == id).select("end_station_name").limit(1).collect()[0]["end_station_name"]
-            top_end_stations.append(tuple((name, count)))
-        top_end_stations = str(top_end_stations)
-
+        top_end_stations = str([(df.where(col("end_station_id") == id).select("end_station_name").limit(1).collect()[0]["end_station_name"], count) for id, count in df.groupBy("end_station_id").count().orderBy(desc("count")).limit(10).collect()])
 
         # tuple(timeslot, percentage)
         try:
@@ -149,7 +134,7 @@ if __name__ == "__main__":
         `top_start_stations`, `top_end_stations`, `time_slots`
         """
 
-        kpis_df = spark.createDataFrame([row(year_month, avg_trip_duration, avg_trip_distance, gender_share, age_share, top_used_bikes, top_start_stations, top_end_stations, time_slots)])
+        kpis_df = spark.createDataFrame([row(year_month, avg_trip_duration, avg_trip_distance, gender_share, age_share, generation_share, top_used_bikes, top_start_stations, top_end_stations, time_slots)])
 
         # Write data to HDFS
         kpis_df.write.format("parquet").mode("overwrite").options(header="true", delimiter=",", nullValue="null", inferschema="true").save(kpi_file)
