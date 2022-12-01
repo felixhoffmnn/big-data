@@ -1,21 +1,20 @@
 import argparse
-from functools import reduce
 import ast
+from functools import reduce
 from os import path
 
 import pyspark
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame, SparkSession
 
 
 def get_args():
     parser = argparse.ArgumentParser(
         description="Some Basic Spark Job doing some stuff on hubway data stored within HDFS."
     )
-    parser.add_argument(
-        "--yearmonth", help="Partion Year Month", required=True, type=str
-    )
+    parser.add_argument("--yearmonth", help="Partion Year Month", required=True, type=str)
 
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     """
@@ -33,21 +32,22 @@ if __name__ == "__main__":
     spark = SparkSession(sc)
 
     data = []
+
+    # Loop over all year months
     for year_month in year_months:
         print("############ {} ############".format(year_month))
 
         kpi_file = path.join("/user/hadoop/hubway_data/kpis", year_month, "kpis.parquet")
 
+        # Load the current kpi file and append it to the data list
         data.append(
             spark.read.format("parquet")
-            .options(
-                header="true", delimiter=",", nullValue="null", inferschema="true"
-            )
+            .options(header="true", delimiter=",", nullValue="null", inferschema="true")
             .load(kpi_file)
         )
 
+    # Combine all dataframes into one
     kpi_data = reduce(DataFrame.unionAll, data)
 
     # Write data to HDFS
-    # TODO: Export to Excel
-    kpi_data.toPandas().to_excel("/home/airflow/output/combined-kpis.xlsx", index=False)
+    kpi_data.toPandas().to_excel("/home/airflow/output/combined-kpis.xls", index=False)

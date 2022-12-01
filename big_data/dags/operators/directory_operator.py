@@ -33,27 +33,13 @@ class CreateDirectoryOperator(BaseOperator):
                 try:
                     os.mkdir(self.path + "/" + self.directory)
                 except OSError:
-                    raise AirflowException(
-                        "Creation of directory '"
-                        + self.path
-                        + "/"
-                        + self.directory
-                        + "' failed."
-                    )
+                    raise AirflowException("Creation of directory '" + self.path + "/" + self.directory + "' failed.")
                 else:
-                    self.log.info(
-                        "Successfully created directory '"
-                        + self.path
-                        + "/"
-                        + self.directory
-                        + "'."
-                    )
+                    self.log.info("Successfully created directory '" + self.path + "/" + self.directory + "'.")
             else:
                 raise AirflowException("Path '" + self.path + "' is not a directory.")
         else:
-            self.log.info(
-                "Directory '" + self.path + "/" + self.directory + "' already exists."
-            )
+            self.log.info("Directory '" + self.path + "/" + self.directory + "' already exists.")
 
         self.log.info("CreateDirectoryOperator done.")
 
@@ -82,17 +68,13 @@ class ClearDirectoryOperator(BaseOperator):
             if os.path.isdir(self.directory):
                 if self.pattern == "":
                     raise AirflowException("Failure, file pattern is empty.")
-                fileList = glob.glob(
-                    self.directory + "/" + self.pattern, recursive=True
-                )
+                fileList = glob.glob(self.directory + "/" + self.pattern, recursive=True)
                 for filePath in fileList:
                     try:
                         os.remove(filePath)
                         self.log.info("Deleted file '" + filePath + "'.")
                     except OSError:
-                        raise AirflowException(
-                            "Failure, couldn't delete file '" + filePath + "'."
-                        )
+                        raise AirflowException("Failure, couldn't delete file '" + filePath + "'.")
                 if len(fileList) == 0:
                     self.log.info(
                         "No files to delete matching pattern '"
@@ -102,9 +84,7 @@ class ClearDirectoryOperator(BaseOperator):
                         + "'."
                     )
             else:
-                raise AirflowException(
-                    "Directory '" + self.directory + "' is not a directory."
-                )
+                raise AirflowException("Directory '" + self.directory + "' is not a directory.")
         else:
             raise AirflowException("Directory '" + self.directory + "' does not exist.")
 

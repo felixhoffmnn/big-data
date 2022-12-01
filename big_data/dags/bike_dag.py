@@ -6,20 +6,12 @@ Description: BigData Lecture DHBW Stuttgart - Exam 2022/2023
 from datetime import datetime
 
 from airflow import DAG
+from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
-
-
-from operators.directory_operator import (
-    ClearDirectoryOperator,
-    CreateDirectoryOperator,
-)
 from helpers.year_months import get_year_months
-from operators.hdfs_file_operator import (
-    HdfsMkdirsFileOperator,
-    HdfsPutFilesOperator
-)
+from operators.directory_operator import ClearDirectoryOperator, CreateDirectoryOperator
+from operators.hdfs_file_operator import HdfsMkdirsFileOperator, HdfsPutFilesOperator
 
 args = {"owner": "airflow"}
 
@@ -33,6 +25,7 @@ dag = DAG(
     max_active_runs=1,
 )
 
+# Create download directory if not exists
 create_local_import_dir = CreateDirectoryOperator(
     task_id="create_import_dir",
     path="/home/airflow",
@@ -40,6 +33,7 @@ create_local_import_dir = CreateDirectoryOperator(
     dag=dag,
 )
 
+# Create output directory if not exists
 create_output_dir = CreateDirectoryOperator(
     task_id="create_output_dir",
     path="/home/airflow",
@@ -47,6 +41,7 @@ create_output_dir = CreateDirectoryOperator(
     dag=dag,
 )
 
+# Clear import directory for clean run
 clear_local_import_dir = ClearDirectoryOperator(
     task_id="clear_import_dir",
     directory="/home/airflow/bike_data",
@@ -54,7 +49,7 @@ clear_local_import_dir = ClearDirectoryOperator(
     dag=dag,
 )
 
-
+# Clear output directory
 clear_output_dir = ClearDirectoryOperator(
     task_id="clear_output_dir",
     directory="/home/airflow/output",
@@ -62,65 +57,69 @@ clear_output_dir = ClearDirectoryOperator(
     dag=dag,
 )
 
-
+# Download data from kaggle.com
 download_data = BashOperator(
-    task_id="download_data",
+    task_id="download-data",
     bash_command="kaggle datasets download -d acmeyer/hubway-data --path /home/airflow/bike_data  --unzip",
     dag=dag,
 )
 
-
-downloaded_files = PythonOperator(
-    task_id="get_year_months",
+# Collect a list of all files in the import directory
+list_files = PythonOperator(
+    task_id="get-year-months",
     python_callable=get_year_months,
     dag=dag,
 )
 
-create_hdfs_hubway_data_partition_dir_raw = HdfsMkdirsFileOperator(
-    task_id="mkdirs-hdfs-hubway-data-dir-raw",
+# Create partition directories in HDFS for raw data
+create_hdfs_partition_raw = HdfsMkdirsFileOperator(
+    task_id="mkdirs-hdfs-raw",
     directory="/user/hadoop/hubway_data/raw/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
 
-create_hdfs_hubway_data_partition_dir_raw.set_upstream(downloaded_files)
+create_hdfs_partition_raw.set_upstream(list_files)
 
-
-create_hdfs_hubway_data_partition_dir_final = HdfsMkdirsFileOperator(
-    task_id="mkdirs-hdfs-hubway-data-dir-final",
+# Create partition directories in HDFS for processed data
+create_hdfs_partition_final = HdfsMkdirsFileOperator(
+    task_id="mkdirs-hdfs-final",
     directory="/user/hadoop/hubway_data/final/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
 
-create_hdfs_hubway_data_partition_dir_final.set_upstream(downloaded_files)
+create_hdfs_partition_final.set_upstream(list_files)
 
-create_hdfs_hubway_data_partition_dir_kpis = HdfsMkdirsFileOperator(
-    task_id="mkdirs-hdfs-hubway-data-dir-kpis",
+# Create partition directories in HDFS for calculated kpis
+create_hdfs_partition_kpis = HdfsMkdirsFileOperator(
+    task_id="mkdirs-hdfs-kpis",
     directory="/user/hadoop/hubway_data/kpis/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
 
-create_hdfs_hubway_data_partition_dir_kpis.set_upstream(downloaded_files)
+create_hdfs_partition_kpis.set_upstream(list_files)
 
-hdfs_put_hubway_data_raw = HdfsPutFilesOperator(
-    task_id="upload-hubway-data-to-hdfs-raw",
+# Upload raw data to HDFS
+copy_raw_to_hdfs = HdfsPutFilesOperator(
+    task_id="upload-raw-to-hdfs",
     local_path="/home/airflow/bike_data/",
     remote_path="/user/hadoop/hubway_data/raw/",
-    file_names=["{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    file_names=["{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     hdfs_conn_id="hdfs",
     dag=dag,
 )
 
-pyspark_submit_raw_data = SparkSubmitOperator(
-    task_id="pyspark_submit_raw_data",
+# Process raw data
+pyspark_process_raw = SparkSubmitOperator(
+    task_id="pyspark-process-raw",
     conn_id="spark",
     application="/home/airflow/airflow/python/optimize_data.py",
-    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     total_executor_cores=4,
     num_executors=2,
     executor_memory="4G",
@@ -128,11 +127,12 @@ pyspark_submit_raw_data = SparkSubmitOperator(
     dag=dag,
 )
 
+# Calculate KPIs
 pyspark_calculate_kpis = SparkSubmitOperator(
     task_id="pyspark_calculate_kpis",
     conn_id="spark",
     application="/home/airflow/airflow/python/calculate_kpis.py",
-    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     total_executor_cores=4,
     num_executors=2,
     executor_memory="4G",
@@ -140,11 +140,12 @@ pyspark_calculate_kpis = SparkSubmitOperator(
     dag=dag,
 )
 
+# Combine calculated KPIs
 pyspark_combine_kpis = SparkSubmitOperator(
     task_id="pyspark_combine_kpis",
     conn_id="spark",
     application="/home/airflow/airflow/python/combine_kpis.py",
-    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get_year_months') }}"],
+    application_args=["--yearmonth", "{{ task_instance.xcom_pull(task_ids='get-year-months') }}"],
     total_executor_cores=4,
     num_executors=2,
     executor_memory="4G",
@@ -156,18 +157,18 @@ pyspark_combine_kpis = SparkSubmitOperator(
 create_local_import_dir >> clear_local_import_dir >> download_data
 create_output_dir >> clear_output_dir >> download_data
 
-download_data >> downloaded_files
+download_data >> list_files
 
-downloaded_files >> create_hdfs_hubway_data_partition_dir_raw
-downloaded_files >> create_hdfs_hubway_data_partition_dir_final
-downloaded_files >> create_hdfs_hubway_data_partition_dir_kpis
+list_files >> create_hdfs_partition_raw
+list_files >> create_hdfs_partition_final
+list_files >> create_hdfs_partition_kpis
 
-create_hdfs_hubway_data_partition_dir_raw >> hdfs_put_hubway_data_raw
+create_hdfs_partition_raw >> copy_raw_to_hdfs
 
-hdfs_put_hubway_data_raw >> pyspark_submit_raw_data
-create_hdfs_hubway_data_partition_dir_final >> pyspark_submit_raw_data
+copy_raw_to_hdfs >> pyspark_process_raw
+create_hdfs_partition_final >> pyspark_process_raw
 
-pyspark_submit_raw_data >> pyspark_calculate_kpis
-create_hdfs_hubway_data_partition_dir_kpis >> pyspark_calculate_kpis
+pyspark_process_raw >> pyspark_calculate_kpis
+create_hdfs_partition_kpis >> pyspark_calculate_kpis
 
 pyspark_calculate_kpis >> pyspark_combine_kpis

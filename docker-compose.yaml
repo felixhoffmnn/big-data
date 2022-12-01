@@ -1,6 +1,5 @@
 version: "3.9"
 
-# TODO: Remove unused ports
 services:
   airflow:
     build:
@@ -11,7 +10,6 @@ services:
     volumes:
       - ./big_data/dags:/home/airflow/airflow/dags/
       - ./big_data/python:/home/airflow/airflow/python/
-      - ./big_data/plugins:/home/airflow/airflow/plugins/
       - ./data/kaggle:/home/airflow/.kaggle/
       - ./data/output:/home/airflow/output/
     ports:

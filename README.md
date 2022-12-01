@@ -1,8 +1,20 @@
 # Hubway Bike Data
 
+| Vorlesung | Semester | Matrikelnummer | Dozent             |
+| --------- | -------- | -------------- | ------------------ |
+| Big Data  | WS 22/23 | 1946566        | Marcel Mittelstädt |
+
 Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters and der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
 
 ## Installation
+
+Um das Projekt auf Google Cloud VMs auszuführen, kann es simpler sein, das Git-Repository zu clonen. Dafür kann der folgende Befehl verwendet werden:
+
+```bash
+git@github.com:felixhoffmnn/big-data.git
+```
+
+Alternativ kann dieser Schritt auch mit `rsync` ersetzt werden. Hierfür könnte dieser [Guide](https://phoenixnap.com/kb/how-to-rsync-over-ssh) hilfreich sein.
 
 Bevor der Workflow zum Konvertieren der Daten ausgeführt werden kann ist es notwendig **Hadoop** und **Airflow** zu starten. Hierfür werden die vorgegeben Container verwendet. Falls dies auf einer GCP VM ausgeführt wird, muss zunächst Docker installiert werden ([Guide](https://docs.docker.com/engine/install/ubuntu/)).
 
@@ -25,40 +37,78 @@ Unter http://localhost:8080/admin sollte nun Airflow erreichbar sein. Hier könn
 
 ## Konzept
 
-Für einen leichteren Umgang verwendet dieses Projekt **Docker Compose** um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
+Für einen leichteren Umgang verwendet dieses Projekt [Docker Compose](#docker-compose) um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
+
+![Task Flow](./data/images/task_flow.png)
 
 Nach dem Ausführen des `bike_dag` werden folgende Schritte ausgeführt:
 
-1. Erstellt oder leert ein Verzeichnis für den Download der Rohdaten
-2. Installiert die benötigten Python Pakete
-3. Lädt den Datensatz herunter
-4. Erstellt ein Ordner für jede `yearmonth` Kombination im HDFS Filesystem
-5. Kopiert die heruntergeladenen Daten in den `raw` Ordner auf dem HDFS Filesystem
-6. Lädt die `raw` Daten und führt Funktionen auf diesen aus und speichert diese letztlich im `final` Ordner auf dem HDFS Filesystem
-7. Lädt die `final` Daten in die Hive Datenbank
-8. Berechnet die **KPIs** mittels PySpark
-9. Lädt die Ergebnisse von dem HDFS Filesystem in das Dateisystem des Nutzers in den `data/output` Ordner
+1. **Erstellt** und / oder **leert** Verzeichnisse für den Download und die finalen KPIs
+2. Lädt den Datensatz von _Kaggle_ herunter
+3. Schaut welche Dateien heruntergeladen wurden und **filtert** diese (`year_months`)
+4. Erstellt ein Ordner für jede `yearmonth` Kombination im _HDFS Filesystem_
+5. Kopiert die heruntergeladenen Daten in den `raw` Ordner auf das _HDFS Filesystem_
+6. **Lädt** die `raw` Daten mittels _PySpark_ und führt Funktionen auf diesen aus und speichert diese letztlich im `final` Ordner auf dem _HDFS Filesystem_
+    - Test
+7. **Lädt** die Daten aus `final` mittels _PySpark_ in ein Dataframe
+8. Berechnet die **KPIs** mittels _PySpark_
+9. **Lädt** die Ergebnisse von dem _HDFS Filesystem_ in das Dateisystem des Nutzers in dem `data/output` Ordner
 
 ### Funktionen
 
-| Funktion | Beschreibung |
-| -------- | ------------ |
-| Test     | Test         |
+In diesem Abschnitt werden die Primären Funktionen der wichtigsten Dateien erklärt.
+
+`bike_dag.py`:
+
+| Funktion                      | Beschreibung                                                                                                                       |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `create_local_import_dir`     | Erstelle Ordner für den Download, wenn dieser nicht existiert (`/home/airflow/bike_data`)                                          |
+| `create_output_dir`           | Erstelle Ordner für die kombinierten KPIs (`/home/airflow/output`)                                                                 |
+| `clear_local_import_dir`      | Löscht Kaggle-Datensatz von vorherigen Durchläufen                                                                                 |
+| `clear_output_dir`            | Löscht Kombinierte KPIs aus vorherigen Durchläufen                                                                                 |
+| `download_data`               | Lädt den Datensatz von Kaggle herunter (`/home/airflow/bike_data`)                                                                 |
+| `list_files`                  | Listet alle Dateien aus `/home/airflow/bike_data` welche mit `6` Nummern (`yyyymm`) anfangen                                       |
+| `create_hdfs_partition_raw`   | Erstellt partitionierte Ordner für die `raw` Daten (`/user/hadoop/hubway_data/raw/{yyyymm}`)                                       |
+| `create_hdfs_partition_final` | Erstellt partitionierte Ordner für die `final` Daten (`/user/hadoop/hubway_data/final/{yyyymm}`)                                   |
+| `create_hdfs_partition_kpis`  | Erstellt partitionierte Ordner für die `kpis` Daten (`/user/hadoop/hubway_data/kpis/{yyyymm}`)                                     |
+| `copy_raw_to_hdfs`            | Kopiert die `csv` Dateien von `/home/airflow/bike_data` nach `/user/hadoop/hubway_data/kpis/{yyyymm}/{yyyymm}-hubway-tripdata.csv` |
+| `pyspark_calculate_kpis`      | Optimiert und bereinigt die Rohdaten auf dem HDFS und verschiebt die `csv` Dateien von `raw` nach `final`                          |
+| `pyspark_combine_kpis`        | Fasst die die partitionierten KPIs in einer Datei zusammen und speichert diese in den `output` Ordner                              |
+
+`calculate_kpis.py`:
+
+| Funktion              | Beschreibung                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `get_distance`        | Berechnet die Distanz zwischen zwei Punkten auf der Basis von Latitude und Longitude         |
+| `get_age`             | Berechnet das Alter eines Nutzers anhand des Geburtsjahres und des aktuellen Datums          |
+| `get_timeslot_helper` | Gibt einen Zeitslot zwischen 0 oder 3 zurück.                                                |
+| `get_timeslot`        | Berechnet den Zeitslot eines Datums basiert auf einem Start- und Enddatum und einem Zeitslot |
+| `get_generation`      | Gibt die Generation eines Nutzers zwischen 0, 1, 2, 3, 4, und 5 zurück                       |
+
+> Note: Zunächst war geplant die Berechnung der Distanz mittels Google Maps vorzunehmen. Ansätze dafür sind auch noch vorhanden, jedoch erwies sich dies als sehr Zeitaufwendig.
+
+`year_months.py`:
+
+| Funktion          | Beschreibung                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `get_year_months` | Gibt eine Liste von `yearmonth` Kombinationen zurück basierend auf den Dateien in `/home/airflow/bike_data` |
 
 ### Datenbereinigung
 
 Um die Qualität der Daten sicherzustellen, werden die Daten vor der Berechnung der KPIs bereinigt. Hierbei werden die folgenden Schritte ausgeführt:
 
-1. Filter `trip_duration` nach Werten größer als `0` und kleiner als `86400` (24 Stunden)
-2. Filter `age` nach Werten größer als `0` und kleiner als `100`
-3. Filter `generation` nach Werten größer als `0` (`generation == -1` repräsentiert einen einen Fehler)
-4. Filter nach `timeslot_[0,1,2,3]` so dass mindestens ein Wert größer als `0` ist
+1. `0 < trip_duration < 86400` (`0` - `24` Stunden)
+2. `0 < age < 100`
+3. `0 < generation` (`-1` repräsentiert einen einen Fehler)
+4. `(0 < timeslot_[0 | 1 | 2 | 3]) & (timeslot_[0 & 1 & 2 & 3] != -1)` (`-1` repräsentiert einen einen Fehler)
 
-### Task Flow
+### Docker Compose
 
-Lorem Ipsum
+Das Docker Compose File ist in zwei Teile aufgeteilt. Zum einen wird der `spark_base` Container gestartet, welcher Hadoop und Hive beinhaltet. Zum anderen wird der `airflow` Container gestartet, welcher Airflow beinhaltet.
 
-## Problems
+Um das `spark_base` Image kompatibel mit docker compose zu machen ist es notwendig dies ein wenig zu verändern. Dies passiert durch `airflow.dockerfile` und `startup.sh`. Innerhalb der `airflow.dockerfile` werden außerdem die benötigten Python Pakete installiert. Die dockerfile wird durch die docker compose gebuilded. Anschließend werden die lokalen Ordner `dags` und `data` an den `airflow` Container gemounted.
+
+## Probleme
 
 1. Wenn ich die docker compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den dag ausführt, läuft alles wieder.
 2. In der docker compose werden einerseits Ordner wie `dags`, `python` und `output` gemounted. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels dem folgenden Befehl können die notwendigen Berechtigungen angepasst werden.

@@ -1,16 +1,19 @@
 {
-    "language": "en, de, python",
-    "words": [
-        "DHBW",
-        "dropna",
-        "hadoop",
-        "HDFS",
-        "hiveserver",
-        "hubway",
-        "Hubway",
-        "Kaggle",
-        "kpis",
-        "Mkdirs",
-        "tripdata"
-    ]
+  "language": "en, de, python",
+  "words": [
+    "DHBW",
+    "dropna",
+    "hadoop",
+    "hdfs",
+    "HDFS",
+    "hiveserver",
+    "hubway",
+    "Hubway",
+    "inferschema",
+    "Kaggle",
+    "kpis",
+    "Mkdirs",
+    "tripdata",
+    "yearmonth"
+  ]
 }

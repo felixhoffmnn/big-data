@@ -1,12 +1,12 @@
-from airflow.hooks.base_hook import BaseHook
-import pyarrow as pa
 import io
 
+import pyarrow as pa
+from airflow.hooks.base_hook import BaseHook
+
+
 class HdfsHook(BaseHook):
-
-    def __init__(self, hdfs_conn_id='hdfs_default'):
+    def __init__(self, hdfs_conn_id="hdfs_default"):
         self.hdfs_conn_id = hdfs_conn_id
-
 
     def get_conn(self):
         conn_data = self.get_connection(self.hdfs_conn_id)
@@ -33,11 +33,10 @@ class HdfsHook(BaseHook):
         :type remote_file: string
         """
         conn = self.get_conn()
-        with open(local_file, 'rb') as l_file:
+        with open(local_file, "rb") as l_file:
             binary_data = io.BytesIO(l_file.read())
 
         conn.upload(remote_file, binary_data)
-
 
     def getFile(self, remote_file, local_file):
         """
@@ -68,12 +67,10 @@ class HdfsHook(BaseHook):
         conn = self.get_conn()
         files = conn.ls(remote_file)
         for file in files:
-            if 'part' in file:
+            if "part" in file:
                 out_buf = io.BytesIO()
                 conn.download(file, out_buf)
-                print('Donwload: ' + file)
+                print("Donwload: " + file)
                 with open(local_file, "wb") as outfile:
                     outfile.write(out_buf.getbuffer())
                 return
-
-
