@@ -10,11 +10,11 @@ date: 2022-12-02
 -   **Semester:** WsSe 22/23
 -   **Dozent:** Marcel Mittelstädt
 
-Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters and der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
+Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters an der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
 
 ## Installation
 
-Um das Projekt auf Google Cloud VMs auszuführen, kann es simpler sein, das Git-Repository zu clonen. Dafür kann der folgende Befehl verwendet werden:
+Um das Projekt auf Google Cloud VMs auszuführen, kann es simpler sein, das Git-Repository zu klonen. Dafür kann der folgende Befehl verwendet werden:
 
 ```bash
 git clone git@github.com:felixhoffmnn/big-data.git
@@ -24,7 +24,7 @@ git clone git@github.com:felixhoffmnn/big-data.git
 
 Alternativ kann dieser Schritt auch mit `rsync` ersetzt werden. Hierfür könnte dieser [Guide](https://phoenixnap.com/kb/how-to-rsync-over-ssh) hilfreich sein.
 
-Bevor der Workflow zum Konvertieren der Daten ausgeführt werden kann ist es notwendig **Hadoop** und **Airflow** zu starten. Hierfür werden die vorgegeben Container verwendet. Falls dies auf einer GCP VM ausgeführt wird, muss zunächst Docker installiert werden ([Guide](https://docs.docker.com/engine/install/ubuntu/)).
+Bevor der Workflow zum Konvertieren der Daten ausgeführt werden kann, ist es notwendig, **Hadoop** und **Airflow** zu starten. Hierfür werden die vorgegebenen Container verwendet. Falls dies auf einer GCP VM ausgeführt wird, muss zunächst Docker installiert werden ([Guide](https://docs.docker.com/engine/install/ubuntu/)).
 
 ```bash
 docker compose up --build -d
@@ -39,13 +39,13 @@ start-all.sh
 hiveserver2
 ```
 
-Es ist relevant das Terminal, in welchem `hiveserver2` ausgeführt wird, nicht zu schließen. Ansonsten wird der Hive Server beendet und die Daten können nicht mehr ausgelesen werden.
+Es ist relevant, das Terminal, in welchem `hiveserver2` ausgeführt wird, nicht zu schließen. Ansonsten wird der Hive Server beendet und die Daten können nicht mehr ausgelesen werden.
 
 Unter [http://localhost:8080/admin](http://localhost:8080/admin) sollte nun Airflow erreichbar sein. Hier können die einzelnen Dags ausgeführt werden.
 
 ## Konzept
 
-Für einen leichteren Umgang verwendet dieses Projekt [Docker Compose](#docker-compose) um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
+Für einen leichteren Umgang verwendet dieses Projekt [Docker Compose](#docker-compose), um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
 
 ![Task Flow](./data/images/task_flow.png)
 
@@ -53,15 +53,15 @@ Nach dem Ausführen des `bike_dag` werden folgende Schritte ausgeführt:
 
 1. **Erstellt** und/oder **leert** Verzeichnisse für den Download und die finalen KPIs
 2. Lädt den Datensatz von _Kaggle_ herunter
-3. Schaut welche Dateien heruntergeladen wurden und **filtert** diese (**year months**) ([Funktionsbeschreibung](#year_months.py))
+3. Schaut, welche Dateien heruntergeladen wurden und **filtert** diese (**year months**) ([Funktionsbeschreibung](#year_months.py))
 4. Erstellt partitionierte Ordner für jede `yyyymm` Kombination im _HDFS Filesystem_ für `raw`, `final` und `kpis` ([Funktionsbeschreibung](#bike_dag.py))
 5. Kopiert die heruntergeladenen Daten in den `raw` Ordner auf das _HDFS Filesystem_ ([Funktionsbeschreibung](#bike_dag.py))
 6. **Lädt** die `raw` Daten mittels _PySpark_ und führt Funktionen auf diesen aus und speichert diese letztlich im `final` Ordner auf dem _HDFS Filesystem_
     1. Iteriert über alle `yyyymm` Kombinationen, lädt anschließend die aktuelle Datei und benennt die Spalten um
-    2. Gruppiert die Daten nach **latitude** und **longitude** um anschließend die Entfernung für jede Kombination zu berechnen
-    3. Joint die Entfernungen mit den initialen Daten um die **trip distance** Spalte jedem Eintrag hinzuzufügen
+    2. Gruppiert die Daten nach **latitude** und **longitude**, um anschließend die Entfernung für jede Kombination zu berechnen
+    3. Joint die Entfernungen mit den initialen Daten, um die **trip distance** Spalte jedem Eintrag hinzuzufügen
     4. Berechnet die **generation**, **age** und **timeslot [0, 1, 2, 3]** ([Funktionsbeschreibung](#calculate_kpis.py))
-    5. Lässt nicht benötigte Spalten fallen
+    5. Nicht benötigte Spalten werden Fallen gelassen
     6. Speichert die Daten als `parquet` im `final` Ordner auf dem _HDFS Filesystem_
 7. **Lädt** die Daten aus `final` mittels _PySpark_ in ein Dataframe und berechnet die **KPIs**
     1. Iteriert über alle `yyyymm` Kombinationen und lädt anschließend die aktuelle Datei
@@ -89,18 +89,18 @@ Die **Excel Datei** mit den zusammengefassten KPIs ist wie folgt aufgebaut:
 
 Das Docker Compose File ist in zwei Teile aufgeteilt. Zum einen wird der `spark_base` Container gestartet, welcher Hadoop und Hive beinhaltet. Zum anderen wird der `airflow` Container gestartet, welcher Airflow beinhaltet.
 
-Um das `spark_base` Image kompatibel mit docker compose zu machen ist es notwendig dies ein wenig zu verändern. Dies passiert durch `airflow.dockerfile` und `startup.sh`. Innerhalb der `airflow.dockerfile` werden außerdem die benötigten Python Pakete installiert. Die dockerfile wird durch die docker compose gebuilded. Anschließend werden die lokalen Ordner `dags` und `data` an den `airflow` Container gemountet.
+Um das `spark_base` Image kompatibel mit Docker Compose zu machen, ist es notwendig dies ein wenig zu verändern. Dies passiert durch `airflow.dockerfile` und `startup.sh`. Innerhalb der `airflow.dockerfile` werden zudem die benötigten Pythonpakete installiert. Die Dockerfile wird durch die Docker Compose gebaut. Anschließend werden die lokalen Ordner `dags` und `data` an den `airflow` Container gemountet.
 
 ### Funktionen
 
-In diesem Abschnitt werden die Primären Funktionen der wichtigsten Dateien erklärt.
+In diesem Abschnitt werden die primären Funktionen der wichtigsten Dateien erklärt.
 
 #### `bike_dag.py`
 
 -   **create_local_import_dir**: Erstelle Ordner für den Download (`/home/airflow/bike_data`), wenn dieser nicht existiert
 -   **create_output_dir**: Erstelle Ordner für die kombinierten KPIs (`/home/airflow/output`)
 -   **clear_local_import_dir**: Löscht Kaggle-Datensatz von vorherigen Durchläufen
--   **clear_output_dir**: Löscht Kombinierte KPIs aus vorherigen Durchläufen
+-   **clear_output_dir**: Löscht kombinierte KPIs aus vorherigen Durchläufen
 -   **download_data**: Lädt den Datensatz von Kaggle herunter und speichert diesen in `/bike_data/`
 -   **list_files**: Listet alle Dateien aus `/bike_data/` welche mit `yyyymm` anfangen
 -   **create_hdfs_partition_raw**: Erstellt partitionierte Ordner (`/raw/{yyyymm}/`) für die `raw` Daten
@@ -108,23 +108,23 @@ In diesem Abschnitt werden die Primären Funktionen der wichtigsten Dateien erkl
 -   **create_hdfs_partition_kpis**: Erstellt partitionierte Ordner (`/kpis/{yyyymm}/`) für die `kpis` Daten
 -   **copy_raw_to_hdfs**: Kopiert die `csv` Dateien von `/bike_data` nach `/kpis/{yyyymm}/`
 -   **pyspark_calculate_kpis**: Optimiert und bereinigt die Rohdaten auf dem HDFS und verschiebt die `csv` Dateien von `raw` nach `final`
--   **pyspark_combine_kpis**: Fasst die die partitionierten KPIs in einer Datei zusammen und speichert diese in den `output` Ordner
+-   **pyspark_combine_kpis**: Fasst die partitionierten KPIs in einer Datei zusammen und speichert diese in den `output` Ordner
 
 #### `calculate_kpis.py`
 
 -   **get_distance**: Berechnet die Distanz zwischen zwei Punkten auf der Basis von Latitude und Longitude
 -   **get_age**: Berechnet das Alter eines Nutzers anhand des Geburtsjahres und des aktuellen Datums
 -   **get_timeslot_helper**: Gibt einen Zeitslot zwischen `0` oder `3` zurück.
--   **get_timeslot**: Berechnet den Zeitslot eines Datums basiert auf einem Start- und Enddatum und einem Zeitslot
+-   **get_timeslot**: Berechnet den Zeitslot eines Datums, basiert auf einem Start- und Enddatum und einem Zeitslot
 -   **get_generation**: Gibt die Generation eines Nutzers zwischen `0`, `1`, `2`, `3`, `4`, und `5` zurück
 
 > **Note:** Zunächst war geplant die Berechnung der Distanz mittels Google Maps vorzunehmen. Ansätze dafür sind auch noch vorhanden, jedoch erwies sich dies als sehr Zeitaufwendig.
 
 #### `year_months.py`
 
--   **get_year_months**: Gibt eine Liste von `yearmonth` Kombinationen zurück basierend auf den Dateien in `/home/airflow/bike_data`
+-   **get_year_months**: Gibt eine Liste von `yearmonth` Kombinationen zurück, basierend auf den Dateien in `/home/airflow/bike_data`
 
-**Note:** Um den DAG zu beschleunigen ist es am einfachsten die Anzahl der zu verarbeitenden Monate zu begrenzen. Dis kann in dieser Datei eingestellt werden. Im folgenden Code wird ein Beispiel gezeigt, um die Anzahl an Monaten auf `3` zu begrenzen.
+**Note:** Um den DAG zu beschleunigen, ist es am einfachsten, die Anzahl der zu verarbeitenden Monate zu begrenzen. Dies kann in dieser Datei eingestellt werden. Im folgenden Code wird ein Beispiel gezeigt, um die Anzahl an Monaten auf `3` zu begrenzen.
 
 ```python
 # Function to get the year month list
@@ -141,16 +141,16 @@ Um die Qualität der Daten sicherzustellen, werden die Daten vor der Berechnung 
 
 1. `0 < trip_duration < 86400` (`0` - `24` Stunden)
 2. `0 < age < 100`
-3. `0 < generation` (`-1` repräsentiert einen einen Fehler)
-4. `(0 < timeslot_[0 | 1 | 2 | 3]) & (timeslot_[0 & 1 & 2 & 3] != -1)` (`-1` repräsentiert einen einen Fehler)
+3. `0 < generation` (`-1` repräsentiert einen Fehler)
+4. `(0 < timeslot_[0 | 1 | 2 | 3]) & (timeslot_[0 & 1 & 2 & 3] != -1)` (`-1` repräsentiert einen Fehler)
 
 ## Probleme
 
-1. Wenn ich die docker compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den dag ausführt, läuft alles wieder.
-2. In der docker compose werden einerseits Ordner wie `dags`, `python` und `output` gemountet. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels dem folgenden Befehl können die notwendigen Berechtigungen angepasst werden.
+1. Wenn ich die Docker Compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den DAG ausführt, läuft alles wieder.
+2. In der Docker Compose werden einerseits Ordner wie `dags`, `python` und `output` gemountet. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels des folgenden Befehls können die notwendigen Berechtigungen angepasst werden.
 
     ```bash
     sudo chmod 777 data/output/
     ```
 
-3. Wenn die docker compose auf einem Windows Rechner ausgeführt wird, kann es dazu kommen, dass die `EOL` von `LF` sich auf `CRLF` ändert. Dies führt dazu, dass der `airflow` Container nicht starten kann.
+3. Wenn die Docker Compose auf einem Windows Rechner ausgeführt wird, kann es dazu kommen, dass die `EOL` von `LF` sich auf `CRLF` ändert. Dies führt dazu, dass der `airflow` Container nicht starten kann.
