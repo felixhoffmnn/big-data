@@ -1,5 +1,4 @@
 kaggle
-googlemaps
-pandas
 openpyxl
-numpy
+pandas
+xlwt

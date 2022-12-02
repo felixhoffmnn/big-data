@@ -8,10 +8,9 @@ from datetime import datetime
 from airflow import DAG
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators import HdfsMkdirsFileOperator, HdfsPutFilesOperator, ClearDirectoryOperator, CreateDirectoryOperator
 from airflow.operators.python_operator import PythonOperator
 from helpers.year_months import get_year_months
-from operators.directory_operator import ClearDirectoryOperator, CreateDirectoryOperator
-from operators.hdfs_file_operator import HdfsMkdirsFileOperator, HdfsPutFilesOperator
 
 args = {"owner": "airflow"}
 
