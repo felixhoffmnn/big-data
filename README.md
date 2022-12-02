@@ -7,7 +7,7 @@ date: 2022-12-02
 # Hubway Bike Data
 
 -   **Vorlesung:** Big Data
--   **Semester:** WsSe 22/23
+-   **Semester:** WiSe 22/23
 -   **Dozent:** Marcel Mittelstädt
 
 Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters an der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
@@ -36,7 +36,6 @@ Nachdem die Container gestartet haben, muss erst noch **Hadoop** und **Hive** ge
 docker exec -it hadoop bash
 sudo su hadoop
 start-all.sh
-hiveserver2
 ```
 
 Es ist relevant, das Terminal, in welchem `hiveserver2` ausgeführt wird, nicht zu schließen. Ansonsten wird der Hive Server beendet und die Daten können nicht mehr ausgelesen werden.
@@ -84,6 +83,8 @@ Die **Excel Datei** mit den zusammengefassten KPIs ist wie folgt aufgebaut:
 | **top_start_stations** | `[(station_name, count), (station_name, count), ...]` | Top 10 der häufigsten Startstationen und deren Anzahl   |
 | **top_end_stations**   | `[(station_name, count), (station_name, count), ...]` | Top 10 der häufigsten Endstationen und deren Anzahl     |
 | **timeslot**           | `[(0, count), (1, count), (2, count), (3, count)]`    | Anteil der Zeitslots an allen Fahrgästen                |
+
+> **Note:** In der Datei `combined_kpis.csv` sind die KPIs für alle Monate zusammengefasst.
 
 ### Docker Compose
 
