@@ -221,6 +221,7 @@ if __name__ == "__main__":
         raw_file = path.join("/user/hadoop/hubway_data/raw", year_month, "{}-hubway-tripdata.csv".format(year_month))
         final_file = path.join("/user/hadoop/hubway_data/final", year_month, "hubway-tripdata.parquet")
 
+        # Load the current month's data and rename the columns
         df = (
             spark.read.format("csv")
             .options(header="true", delimiter=",", nullValue="null", inferschema="true")

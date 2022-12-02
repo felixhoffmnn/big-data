@@ -50,4 +50,4 @@ if __name__ == "__main__":
     kpi_data = reduce(DataFrame.unionAll, data)
 
     # Write data to HDFS
-    kpi_data.toPandas().to_excel("/home/airflow/output/combined-kpis.xls", index=False)
+    kpi_data.toPandas().to_excel("/home/airflow/output/combined-kpis.xlsx", index=False, header=True)

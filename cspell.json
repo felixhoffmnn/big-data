@@ -1,8 +1,11 @@
 {
   "language": "en, de, python",
   "words": [
+    "clonen",
     "DHBW",
     "dropna",
+    "felixhoffmnn",
+    "gebuilded",
     "hadoop",
     "hdfs",
     "HDFS",
@@ -12,7 +15,11 @@
     "inferschema",
     "Kaggle",
     "kpis",
+    "Mittelstädt",
     "Mkdirs",
+    "openpyxl",
+    "pyspark",
+    "timeslot",
     "tripdata",
     "yearmonth"
   ]

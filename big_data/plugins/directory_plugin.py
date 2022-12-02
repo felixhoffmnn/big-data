@@ -1,5 +1,6 @@
 from airflow.plugins_manager import AirflowPlugin
-from operators.directory_operator import CreateDirectoryOperator, ClearDirectoryOperator
+from operators.directory_operator import ClearDirectoryOperator, CreateDirectoryOperator
+
 
 class DirectoryPlugin(AirflowPlugin):
     name = "directory_plugins"

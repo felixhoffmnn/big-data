@@ -104,6 +104,8 @@ if __name__ == "__main__":
         age_share = str(
             [(age, count) for age, count in df.groupBy("age").count().orderBy(desc("count")).collect()][:10]
         )
+
+        # Calculate top 10 by generation share
         generation_share = str(
             [
                 (generation, count)
