@@ -1,10 +1,14 @@
 ---
-title: "Big Data"
+title: "Hubway Bike Dataset"
+subtitle: "Processing a Dataset using Airflow and Hadoop"
+subject: "Big Data"
 author: "Felix Hoffmann (Mat. Nr.: 1946566)"
 date: 2022-12-02
+keywords: ["big data", "airflow", "hadoop"]
+lang: "de"
 ---
 
-# Hubway Bike Data
+# Introduction
 
 -   **Vorlesung:** Big Data
 -   **Semester:** WiSe 22/23
@@ -12,7 +16,7 @@ date: 2022-12-02
 
 Projektabgabe für die Vorlesung _Big Data_ während des 5. Semesters an der DHBW Stuttgart. Dieses Projekt beschäftigt sich mit dem Konvertieren und Auswerten von einem [Datensatz](https://www.kaggle.com/datasets/acmeyer/hubway-data) eines **Bike-Sharing** Anbieters aus **Boston**.
 
-## Installation
+# Installation
 
 Um das Projekt auf Google Cloud VMs auszuführen, kann es simpler sein, das Git-Repository zu klonen. Dafür kann der folgende Befehl verwendet werden:
 
@@ -30,7 +34,7 @@ Bevor der Workflow zum Konvertieren der Daten ausgeführt werden kann, ist es no
 docker compose up --build -d
 ```
 
-Nachdem die Container gestartet haben, muss erst noch **Hadoop** und **Hive** gestartet werden. Dies geschieht jedoch innerhalb des `hadoop` Containers.
+Nachdem die Container gestartet haben, muss erst noch **Hadoop** gestartet werden. Dies geschieht jedoch innerhalb des `hadoop` Containers.
 
 ```bash
 docker exec -it hadoop bash
@@ -38,11 +42,9 @@ sudo su hadoop
 start-all.sh
 ```
 
-Es ist relevant, das Terminal, in welchem `hiveserver2` ausgeführt wird, nicht zu schließen. Ansonsten wird der Hive Server beendet und die Daten können nicht mehr ausgelesen werden.
-
 Unter [http://localhost:8080/admin](http://localhost:8080/admin) sollte nun Airflow erreichbar sein. Hier können die einzelnen Dags ausgeführt werden.
 
-## Konzept
+# Konzept
 
 Für einen leichteren Umgang verwendet dieses Projekt [Docker Compose](#docker-compose), um die benötigten Dateien direkt an die Container zu übergeben. Dadurch werden außerdem die finalen **KPIs** auch im Dateisystem des Nutzers gespeichert.
 
@@ -86,17 +88,17 @@ Die **Excel Datei** mit den zusammengefassten KPIs ist wie folgt aufgebaut:
 
 > **Note:** In der Datei `combined_kpis.csv` sind die KPIs für alle Monate zusammengefasst.
 
-### Docker Compose
+## Docker Compose
 
 Das Docker Compose File ist in zwei Teile aufgeteilt. Zum einen wird der `spark_base` Container gestartet, welcher Hadoop und Hive beinhaltet. Zum anderen wird der `airflow` Container gestartet, welcher Airflow beinhaltet.
 
 Um das `spark_base` Image kompatibel mit Docker Compose zu machen, ist es notwendig dies ein wenig zu verändern. Dies passiert durch `airflow.dockerfile` und `startup.sh`. Innerhalb der `airflow.dockerfile` werden zudem die benötigten Pythonpakete installiert. Die Dockerfile wird durch die Docker Compose gebaut. Anschließend werden die lokalen Ordner `dags` und `data` an den `airflow` Container gemountet.
 
-### Funktionen
+## Funktionen
 
 In diesem Abschnitt werden die primären Funktionen der wichtigsten Dateien erklärt.
 
-#### `bike_dag.py`
+### `bike_dag.py`
 
 -   **create_local_import_dir**: Erstelle Ordner für den Download (`/home/airflow/bike_data`), wenn dieser nicht existiert
 -   **create_output_dir**: Erstelle Ordner für die kombinierten KPIs (`/home/airflow/output`)
@@ -111,7 +113,7 @@ In diesem Abschnitt werden die primären Funktionen der wichtigsten Dateien erkl
 -   **pyspark_calculate_kpis**: Optimiert und bereinigt die Rohdaten auf dem HDFS und verschiebt die `csv` Dateien von `raw` nach `final`
 -   **pyspark_combine_kpis**: Fasst die partitionierten KPIs in einer Datei zusammen und speichert diese in den `output` Ordner
 
-#### `calculate_kpis.py`
+### `calculate_kpis.py`
 
 -   **get_distance**: Berechnet die Distanz zwischen zwei Punkten auf der Basis von Latitude und Longitude
 -   **get_age**: Berechnet das Alter eines Nutzers anhand des Geburtsjahres und des aktuellen Datums
@@ -121,7 +123,7 @@ In diesem Abschnitt werden die primären Funktionen der wichtigsten Dateien erkl
 
 > **Note:** Zunächst war geplant die Berechnung der Distanz mittels Google Maps vorzunehmen. Ansätze dafür sind auch noch vorhanden, jedoch erwies sich dies als sehr Zeitaufwendig.
 
-#### `year_months.py`
+### `year_months.py`
 
 -   **get_year_months**: Gibt eine Liste von `yearmonth` Kombinationen zurück, basierend auf den Dateien in `/home/airflow/bike_data`
 
@@ -136,7 +138,7 @@ def get_year_months():
     return [file[:6] for file in files][:3]
 ```
 
-### Datenbereinigung
+## Datenbereinigung
 
 Um die Qualität der Daten sicherzustellen, werden die Daten vor der Berechnung der KPIs bereinigt. Hierbei werden die folgenden Schritte ausgeführt:
 
@@ -145,13 +147,12 @@ Um die Qualität der Daten sicherzustellen, werden die Daten vor der Berechnung 
 3. `0 < generation` (`-1` repräsentiert einen Fehler)
 4. `(0 < timeslot_[0 | 1 | 2 | 3]) & (timeslot_[0 & 1 & 2 & 3] != -1)` (`-1` repräsentiert einen Fehler)
 
-## Probleme
+# Probleme
 
-1. Wenn ich die Docker Compose lokal ausgeführt habe, beendet der `hiveserver2` sich immer nach `30` Verbindungen. Sobald man den `hiveserver2` einfach erneut startet und den DAG ausführt, läuft alles wieder.
-2. In der Docker Compose werden einerseits Ordner wie `dags`, `python` und `output` gemountet. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels des folgenden Befehls können die notwendigen Berechtigungen angepasst werden.
+1. In der Docker Compose werden einerseits Ordner wie `dags`, `python` und `output` gemountet. Bei letzterem kam es zu Problemen, da der Ordner nicht von einem lokalen Nutzer im Container erstellt wurde. Mittels des folgenden Befehls können die notwendigen Berechtigungen angepasst werden.
 
     ```bash
     sudo chmod 777 data/output/
     ```
 
-3. Wenn die Docker Compose auf einem Windows Rechner ausgeführt wird, kann es dazu kommen, dass die `EOL` von `LF` sich auf `CRLF` ändert. Dies führt dazu, dass der `airflow` Container nicht starten kann.
+2. Wenn die Docker Compose auf einem Windows Rechner ausgeführt wird, kann es dazu kommen, dass die `EOL` von `LF` sich auf `CRLF` ändert. Dies führt dazu, dass der `airflow` Container nicht starten kann.
